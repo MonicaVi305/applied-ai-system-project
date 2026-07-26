@@ -1,0 +1,31 @@
+2026-07-26 16:35:01,578 - INFO - Loaded 22 songs from data/songs.csv
+2026-07-26 16:35:01,579 - INFO - RAG retrieval: 16 candidates from 22 songs
+2026-07-26 16:35:01,580 - INFO - Returning top 5 recommendations for profile: {'favorite_genre': 'pop', 'favorite_mood': 'happy', 'target_energy': 0.9}
+2026-07-26 16:35:01,581 - INFO - RAG retrieval: 16 candidates from 22 songs
+2026-07-26 16:35:01,581 - INFO - Returning top 5 recommendations for profile: {'favorite_genre': 'lofi', 'favorite_mood': 'chill', 'target_energy': 0.3}
+2026-07-26 16:35:01,582 - INFO - RAG retrieval: 13 candidates from 22 songs
+2026-07-26 16:35:01,583 - INFO - Returning top 5 recommendations for profile: {'favorite_genre': 'rock', 'favorite_mood': 'intense', 'target_energy': 0.95}
+2026-07-26 16:35:01,584 - INFO - RAG retrieval: 22 candidates from 22 songs
+2026-07-26 16:35:01,584 - INFO - Returning top 5 recommendations for profile: {'favorite_genre': 'pop', 'favorite_mood': '', 'target_energy': 0.5}
+2026-07-26 16:38:53,928 - INFO - Loaded 22 songs from data/songs.csv
+2026-07-26 16:38:53,930 - INFO - RAG retrieval: 5 candidates from 5 songs
+2026-07-26 16:38:53,930 - INFO - Returning top 5 recommendations for profile: {'favorite_genre': 'zzzz', 'favorite_mood': 'zzzz', 'target_energy': 0.5}
+2026-07-26 16:38:53,930 - INFO - RAG retrieval: 3 candidates from 5 songs
+2026-07-26 16:38:53,930 - INFO - Returning top 3 recommendations for profile: {'favorite_genre': 'pop', 'favorite_mood': 'happy', 'target_energy': 0.9}
+2026-07-26 16:38:53,930 - INFO - RAG retrieval: 3 candidates from 5 songs
+2026-07-26 16:38:53,930 - INFO - Returning top 5 recommendations for profile: {'favorite_genre': 'pop', 'favorite_mood': 'happy', 'target_energy': 0.9}
+2026-07-26 16:38:53,930 - INFO - RAG retrieval: 3 candidates from 5 songs
+2026-07-26 16:38:53,931 - INFO - Returning top 5 recommendations for profile: {'favorite_genre': 'pop', 'favorite_mood': 'happy', 'target_energy': 0.9}
+2026-07-26 16:38:53,931 - WARNING - Missing key in user_prefs: favorite_mood
+2026-07-26 16:38:53,931 - WARNING - No candidates retrieved — returning empty list
+2026-07-26 16:50:37,576 - INFO - Loaded 22 songs from data/songs.csv
+2026-07-26 16:50:37,578 - INFO - RAG retrieval: 5 candidates from 5 songs
+2026-07-26 16:50:37,578 - INFO - Returning top 5 recommendations for profile: {'favorite_genre': 'zzzz', 'favorite_mood': 'zzzz', 'target_energy': 0.5}
+2026-07-26 16:50:37,579 - INFO - RAG retrieval: 3 candidates from 5 songs
+2026-07-26 16:50:37,579 - INFO - Returning top 3 recommendations for profile: {'favorite_genre': 'pop', 'favorite_mood': 'happy', 'target_energy': 0.9}
+2026-07-26 16:50:37,579 - INFO - RAG retrieval: 3 candidates from 5 songs
+2026-07-26 16:50:37,579 - INFO - Returning top 5 recommendations for profile: {'favorite_genre': 'pop', 'favorite_mood': 'happy', 'target_energy': 0.9}
+2026-07-26 16:50:37,579 - INFO - RAG retrieval: 3 candidates from 5 songs
+2026-07-26 16:50:37,579 - INFO - Returning top 5 recommendations for profile: {'favorite_genre': 'pop', 'favorite_mood': 'happy', 'target_energy': 0.9}
+2026-07-26 16:50:37,579 - WARNING - Missing key in user_prefs: favorite_mood
+2026-07-26 16:50:37,579 - WARNING - No candidates retrieved — returning empty list

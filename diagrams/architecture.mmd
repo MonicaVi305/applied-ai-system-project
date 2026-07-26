@@ -1,0 +1,23 @@
+flowchart TD
+    A([User Profile Input]) --> B[RAG Retriever]
+    C[(songs.csv)] --> B
+    B --> D{Candidates Found?}
+    D -->|No| E([Return Empty List + Log Warning])
+    D -->|Yes| F[Score Each Song]
+    F --> G[Genre Match +2.0]
+    F --> H[Mood Match +1.0]
+    F --> I[Energy Similarity 0-2.0]
+    G --> J[Calculate Total Score]
+    H --> J
+    I --> J
+    J --> K[Calculate Confidence Score]
+    K --> L[Sort by Score Descending]
+    L --> M[Return Top K Results]
+    M --> N([CLI Output with Reasons])
+    M --> O[(logs/recommender.log)]
+
+    style A fill:#4CAF50,color:#fff
+    style E fill:#f44336,color:#fff
+    style N fill:#2196F3,color:#fff
+    style O fill:#FF9800,color:#fff
+    style C fill:#9C27B0,color:#fff

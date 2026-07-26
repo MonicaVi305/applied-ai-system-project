@@ -1,168 +1,142 @@
+# Music Recommender - Extended with RAG, Logging, and Guardrails
 import csv
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Tuple
+import logging
+import os
+from datetime import datetime
 
+# Set up logging
+os.makedirs("logs", exist_ok=True)
+logging.basicConfig(
+    filename="logs/recommender.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
-@dataclass
-class Song:
-    """
-    Represents a song and its attributes.
-    Required by tests/test_recommender.py
-    """
-
-    id: int
-    title: str
-    artist: str
-    genre: str
-    mood: str
-    energy: float
-    tempo_bpm: float
-    valence: float
-    danceability: float
-    acousticness: float
-
-
-@dataclass
-class UserProfile:
-    """
-    Represents a user's taste preferences.
-    Required by tests/test_recommender.py
-    """
-
-    favorite_genre: str
-    favorite_mood: str
-    target_energy: float
-    likes_acoustic: bool
-
-
-class Recommender:
-    """
-    OOP implementation of the recommendation logic.
-    Required by tests/test_recommender.py
-    """
-
-    def __init__(self, songs: List[Song]):
-        self.songs = songs
-
-    def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
-        scored_songs = []
-        for index, song in enumerate(self.songs):
-            score, _ = score_song(self._user_to_prefs(user), self._song_to_dict(song))
-            scored_songs.append((score, index, song))
-
-        scored_songs.sort(key=lambda item: (-item[0], item[1]))
-        return [song for _, _, song in scored_songs[:k]]
-
-    def explain_recommendation(self, user: UserProfile, song: Song) -> str:
-        _, reasons = score_song(self._user_to_prefs(user), self._song_to_dict(song))
-        return _format_explanation(reasons)
-
-    @staticmethod
-    def _user_to_prefs(user: UserProfile) -> Dict[str, object]:
-        return {
-            "favorite_genre": user.favorite_genre,
-            "favorite_mood": user.favorite_mood,
-            "target_energy": user.target_energy,
-            "likes_acoustic": user.likes_acoustic,
-        }
-
-    @staticmethod
-    def _song_to_dict(song: Song) -> Dict[str, object]:
-        return {
-            "id": song.id,
-            "title": song.title,
-            "artist": song.artist,
-            "genre": song.genre,
-            "mood": song.mood,
-            "energy": song.energy,
-            "tempo_bpm": song.tempo_bpm,
-            "valence": song.valence,
-            "danceability": song.danceability,
-            "acousticness": song.acousticness,
-        }
-
-
-def load_songs(csv_path: str) -> List[Dict]:
-    """Load songs from a CSV file into a list of dictionaries."""
-    songs_path = Path(csv_path)
-    print(f"Loading songs from {songs_path}...")
-
-    with songs_path.open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
-        songs = []
-        for row in reader:
-            songs.append(
-                {
-                    "id": int(row["id"]),
-                    "title": row["title"],
-                    "artist": row["artist"],
-                    "genre": row["genre"],
-                    "mood": row["mood"],
-                    "energy": float(row["energy"]),
-                    "tempo_bpm": float(row["tempo_bpm"]),
-                    "valence": float(row["valence"]),
-                    "danceability": float(row["danceability"]),
-                    "acousticness": float(row["acousticness"]),
-                }
-            )
-
+def load_songs(filepath="data/songs.csv"):
+    """Load songs from CSV and convert numerical values to floats."""
+    songs = []
+    try:
+        with open(filepath, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                try:
+                    row["energy"] = float(row["energy"])
+                    row["tempo_bpm"] = float(row["tempo_bpm"])
+                    if "popularity_rating" in row:
+                        row["popularity_rating"] = float(row["popularity_rating"])
+                    songs.append(row)
+                except ValueError as e:
+                    logging.warning(f"Skipping malformed row: {row} — {e}")
+        logging.info(f"Loaded {len(songs)} songs from {filepath}")
+    except FileNotFoundError:
+        logging.error(f"File not found: {filepath}")
+        print(f"ERROR: Could not find {filepath}")
     return songs
 
 
-def _format_explanation(reasons: List[str]) -> str:
-    """Convert a list of scoring reasons into a readable explanation string."""
-    if not reasons:
-        return "This song did not match your profile closely."
-    return " | ".join(reasons)
+def retrieve_relevant_songs(user_prefs, songs, top_n=15):
+    """
+    RAG-style retrieval: pre-filter songs that are loosely relevant
+    to the user profile before scoring. This narrows the candidate pool.
+    """
+    # Guardrail: validate user_prefs
+    if not isinstance(user_prefs, dict):
+        logging.error("Invalid user_prefs: must be a dictionary")
+        return []
+
+    required_keys = ["favorite_genre", "favorite_mood", "target_energy"]
+    for key in required_keys:
+        if key not in user_prefs:
+            logging.warning(f"Missing key in user_prefs: {key}")
+            print(f"WARNING: user profile is missing '{key}'")
+            return []
+
+    candidates = []
+    for song in songs:
+        genre_match = song.get("genre", "").lower() == user_prefs["favorite_genre"].lower()
+        mood_match = song.get("mood", "").lower() == user_prefs["favorite_mood"].lower()
+        energy_close = abs(song["energy"] - user_prefs["target_energy"]) <= 0.5
+
+        if genre_match or mood_match or energy_close:
+            candidates.append(song)
+
+    logging.info(f"RAG retrieval: {len(candidates)} candidates from {len(songs)} songs")
+    return candidates[:top_n]
 
 
-def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
-    """Score one song against a user's preference profile and explain the result."""
+def score_song(user_prefs, song):
+    """Score a single song against user preferences and return score + reasons."""
     score = 0.0
-    reasons: List[str] = []
+    reasons = []
 
-    genre_weight = 1.0
-    mood_weight = 1.0
-    energy_weight = 2.0 
+    # Guardrail: skip songs missing required fields
+    required = ["genre", "mood", "energy"]
+    for field in required:
+        if field not in song:
+            logging.warning(f"Song missing field '{field}': {song}")
+            return 0.0, [f"Song data incomplete — missing {field}"]
 
-    favorite_genre = user_prefs.get("favorite_genre")
-    if favorite_genre and song.get("genre") == favorite_genre:
-        score += genre_weight
-        reasons.append(f"Genre matched your favorite genre '{favorite_genre}' (+{genre_weight:.1f}).")
-    else: 
-        
-        reasons.append(f"Genre did not match '{favorite_genre}'.")
-
-    favorite_mood = user_prefs.get("favorite_mood")
-    if favorite_mood and song.get("mood") == favorite_mood:
-        score += mood_weight
-        reasons.append(f"Mood matched your favorite mood '{favorite_mood}' (+{mood_weight:.1f}).")
+    # Genre match
+    if song["genre"].lower() == user_prefs.get("favorite_genre", "").lower():
+        score += 2.0
+        reasons.append(f"Genre matched your favorite genre '{user_prefs['favorite_genre']}' (+2.0).")
     else:
-        reasons.append(f"Mood did not match '{favorite_mood}'.")
+        reasons.append(f"Genre did not match '{user_prefs.get('favorite_genre')}'.")
 
-    target_energy = user_prefs.get("target_energy")
-    if target_energy is not None:
-        target_energy_value = float(target_energy)
-        current_energy = float(song.get("energy", 0.0))
-        energy_gap = abs(current_energy - target_energy_value)
-        energy_similarity = max(0.0, 1.0 - energy_gap)
-        energy_bonus = energy_similarity * energy_weight
-        score += energy_bonus
-        reasons.append(
-            f"Energy was {energy_similarity:.2f} similar to your target ({current_energy:.2f} vs {target_energy_value:.2f}), adding {energy_bonus:.2f}."
-        )
+    # Mood match
+    if song["mood"].lower() == user_prefs.get("favorite_mood", "").lower():
+        score += 1.0
+        reasons.append(f"Mood matched your favorite mood '{user_prefs['favorite_mood']}' (+1.0).")
+    else:
+        reasons.append(f"Mood did not match '{user_prefs.get('favorite_mood')}'.")
 
-    return score, reasons
+    # Energy similarity
+    energy_gap = abs(song["energy"] - user_prefs.get("target_energy", 0.5))
+    energy_score = round(max(0.0, 1.0 - energy_gap) * 2, 2)
+    score += energy_score
+    reasons.append(
+        f"Energy similarity score: {energy_score:.2f} "
+        f"(song={song['energy']:.2f} vs target={user_prefs.get('target_energy', 0.5):.2f})."
+    )
+
+    return round(score, 2), reasons
 
 
-def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
-    """Rank songs by score and return the top-k recommendations with explanations."""
-    scored_songs = []
-    for index, song in enumerate(songs):
+def calculate_confidence(score, max_score=5.0):
+    """Calculate a confidence score between 0.0 and 1.0."""
+    return round(min(score / max_score, 1.0), 2)
+
+
+def recommend_songs(user_prefs, songs, k=5):
+    """
+    Full pipeline: retrieve relevant songs (RAG),
+    score each one, and return top K with confidence scores.
+    """
+    # Guardrail: check k is valid
+    if not isinstance(k, int) or k <= 0:
+        logging.warning(f"Invalid k value: {k}, defaulting to 5")
+        k = 5
+
+    # RAG retrieval step
+    candidates = retrieve_relevant_songs(user_prefs, songs)
+
+    if not candidates:
+        logging.warning("No candidates retrieved — returning empty list")
+        return []
+
+    scored = []
+    for song in candidates:
         score, reasons = score_song(user_prefs, song)
-        explanation = _format_explanation(reasons)
-        scored_songs.append((song, score, explanation, index))
+        confidence = calculate_confidence(score)
+        scored.append({
+            "song": song,
+            "score": score,
+            "confidence": confidence,
+            "reasons": reasons
+        })
 
-    scored_songs.sort(key=lambda item: (-item[1], item[3]))
-    return [(song, score, explanation) for song, score, explanation, _ in scored_songs[:k]]
+    # Sort by score descending
+    scored.sort(key=lambda x: x["score"], reverse=True)
+
+    logging.info(f"Returning top {k} recommendations for profile: {user_prefs}")
+    return scored[:k] 
