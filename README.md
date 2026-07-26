@@ -65,6 +65,15 @@ See `diagrams/architecture.mmd` for the full system diagram.
 | test_invalid_user_prefs | Bad profile returns empty list | ✅ Pass |
 
 **8/8 tests passed.**
+## Guardrail Behavior Examples
+
+| Test Input | Behavior | Result |
+|---|---|---|
+| Valid pop/happy profile | Returns top 5 songs with confidence scores | ✅ Pass |
+| Empty mood string `""` | System still returns genre+energy matches, mood skipped | ✅ Handled |
+| Missing `favorite_mood` key | Logs warning, returns empty list | ✅ Handled |
+| Unknown genre `"zzzz"` | Returns low-confidence energy-only matches (< 0.5) | ✅ Handled |
+| Invalid k value `k=-1` | Logs warning, defaults to k=5 | ✅ Handled |
 
 ## Reflection
 See `model_card.md` for full responsible AI reflection.

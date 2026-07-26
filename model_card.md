@@ -46,6 +46,43 @@ All 8 tests passed.
 3. Add tempo_bpm matching as a fourth scoring dimension
 
 ## AI Collaboration Reflection
+## AI Collaboration Reflection
+
+### How I used AI during development
+I used Claude to generate initial scaffolds for the scoring logic, test
+structure, and RAG retrieval function. I prompted it with specific
+requirements from the rubric and refined the output by comparing it
+against my UML design. I also used AI to debug a failing test where
+the empty-profile case was returning low-confidence results instead
+of an empty list — AI helped me understand why energy scoring alone
+was still passing candidates through the RAG filter.
+
+### One helpful AI suggestion
+The RAG pre-filtering step was suggested by AI and meaningfully improved
+the system. By narrowing candidates before scoring, the system avoids
+wasting computation on songs that are completely unrelated to the user
+profile. This is a pattern used in real production recommenders.
+
+### One flawed AI suggestion
+AI initially suggested returning an empty list for any profile with no
+exact genre match. This was too strict — it would have broken the edge
+case profile entirely and ignored songs that match on energy. I revised
+the logic to use energy proximity as a fallback retrieval signal, which
+better reflects how real recommenders handle partial matches.
+
+### System limitations
+- The dataset has only 22 songs, which limits recommendation variety
+- Genre is weighted at +2.0, which can overshadow mood matches
+- The system cannot learn from user feedback — same profile always
+  returns the same results
+- Energy scoring always awards some points, so even poor matches
+  receive non-zero confidence scores
+
+### Future improvements
+1. Add collaborative filtering using listening history across users
+2. Expand dataset to 100+ songs with more diverse genres
+3. Add tempo_bpm as a fourth scoring dimension
+4. Implement a feedback loop where users can rate recommendations
 
 ### How AI helped
 AI generated the initial scaffolds for scoring logic and test structure,
